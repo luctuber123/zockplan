@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Zockplan</title>
+<meta name="description" content="Wann habt ihr Zeit – und was wird gezockt?">
+<meta name="theme-color" content="#f2f3fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#09080f" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Zockplan">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+
+
+<div class="app" id="app" data-tab="cal">
+  <header class="top">
+    <div class="brand">
+      <h1>Zock<span>plan</span></h1>
+      <p>Wann habt ihr Zeit – und was wird gezockt?</p>
+    </div>
+    <div class="topright">
+      <button class="icon-btn glass look" id="serBtn" type="button" aria-label="Serien – wiederkehrende Termine" title="Serien"></button>
+      <button class="icon-btn glass look" id="lookBtn" type="button" aria-label="Hell oder dunkel"></button>
+      <button class="who glass" id="whoBtn" type="button" aria-label="Anzeigenamen ändern">
+        <span class="av lg" id="whoAv">?</span>
+        <span><small>Du bist</small><strong id="whoName">…</strong></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="banner glass" id="banner" hidden></div>
+
+  <div class="cols">
+    <div class="side">
+      <div id="feedBox" class="calpart"></div>
+      <div id="nextBox" class="calpart"></div>
+      <section class="hits calpart" aria-live="polite">
+        <p class="label" id="hitsLabel">Treffer diese Woche</p>
+        <div class="hit-list" id="hitList"></div>
+      </section>
+      <aside class="shelf glass">
+        <h2>Spiele</h2>
+        <p class="hint-wide">Zieh ein Spiel auf einen Tag – oder tipp den Tag an und wähl es dort aus.</p>
+        <p class="hint-narrow">Hier verwaltest du die Spiele und ihre Cover. Auswählen kannst du sie im Kalender, wenn du einen Tag antippst.</p>
+        <div class="glist" id="gameList"></div>
+        <form class="addform" id="addGame">
+          <button type="button" class="picbtn" id="newPic" aria-label="Vorschaubild wählen" title="Vorschaubild wählen"></button>
+          <input class="field" id="newGame" placeholder="Neues Spiel" maxlength="40" autocomplete="off">
+          <button class="btn round" type="submit" aria-label="Spiel hinzufügen">+</button>
+        </form>
+      </aside>
+    </div>
+    <div class="mainc">
+      <section class="toolbar glass calpart">
+        <div class="seg" role="group" aria-label="Ansicht">
+          <button type="button" id="vWeek" aria-pressed="true">Woche</button>
+          <button type="button" id="vMonth" aria-pressed="false">Monat</button>
+        </div>
+        <div class="nav">
+          <button class="icon-btn" id="prev" type="button" aria-label="Zurück">‹</button>
+          <div class="range" id="range"></div>
+          <button class="icon-btn" id="next" type="button" aria-label="Weiter">›</button>
+          <button class="pill" id="todayBtn" type="button">Heute</button>
+        </div>
+      </section>
+      <main id="cal" class="calpart"></main>
+    </div>
+  </div>
+</div>
+
+<nav class="tabbar" aria-label="Bereich">
+  <button type="button" id="tabCal" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Kalender</button>
+  <button type="button" id="tabGames" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h10a5 5 0 0 1 4.9 6l-.6 3a2.5 2.5 0 0 1-4.3 1.2L15 16H9l-2 2.2A2.5 2.5 0 0 1 2.7 17l-.6-3A5 5 0 0 1 7 8Z"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="12" r=".6" fill="currentColor"/><circle cx="18" cy="13.6" r=".6" fill="currentColor"/></svg>Spiele</button>
+</nav>
+
+<input type="file" id="fileIn" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+
+<div class="overlay" id="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <span class="grabber"></span>
+    <div class="phead">
+      <div>
+        <p class="label" id="sheetKw"></p>
+        <h2 id="sheetTitle"></h2>
+      </div>
+      <button class="icon-btn" id="sheetClose" type="button" aria-label="Schließen">×</button>
+    </div>
+    <p class="holinote" id="sheetHoli" hidden></p>
+    <div class="box" id="sheetStatus" hidden></div>
+    <div id="sheetFix"></div>
+    <div class="box" id="sheetVote" hidden></div>
+    <div class="box" id="sheetEntries"></div>
+    <div class="box" id="sheetNotes">
+      <p class="label">Kommentare</p>
+      <div class="notes" id="noteList"></div>
+      <form class="noteform" id="noteForm">
+        <input class="field" id="noteIn" maxlength="300" placeholder="Kommentar schreiben …" autocomplete="off" aria-label="Kommentar">
+        <button class="btn round" type="submit" aria-label="Kommentar senden"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </form>
+    </div>
+    <button class="btn sec wide" type="button" id="openForm">+ Meine Zeit eintragen</button>
+    <form class="box" id="slotForm" novalidate>
+      <p class="label" id="formLabel">Deine Zeit</p>
+      <div class="times">
+        <label for="tFrom">Von<input type="time" id="tFrom"></label>
+        <label for="tTo">Bis<input type="time" id="tTo"></label>
+      </div>
+      <div class="repeat" id="repeatRow">
+        <p class="label">Wiederholen</p>
+        <div class="chips3" role="group" aria-label="Wiederholen" id="repeatSeg">
+          <button type="button" data-rep="0" aria-pressed="true">Einmalig</button>
+          <button type="button" data-rep="1" aria-pressed="false">Jede Woche</button>
+          <button type="button" data-rep="2" aria-pressed="false">Alle 2 Wochen</button>
+        </div>
+      </div>
+      <p class="label">Wunschspiele</p>
+      <div class="zone" id="zone"></div>
+      <div class="picks" id="pickList"></div>
+      <p class="err" id="formErr" hidden></p>
+      <div class="foot">
+        <button class="btn sec" type="button" id="cancelEdit" hidden>Abbrechen</button>
+        <button class="btn" type="submit" id="saveBtn">Eintragen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="overlay" id="seriesPanel" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="serTitle">
+    <span class="grabber"></span>
+    <div class="phead">
+      <div><p class="label">Wiederkehrende Termine</p><h2 id="serTitle">Serien</h2></div>
+      <button class="icon-btn" id="serClose" type="button" aria-label="Schließen">×</button>
+    </div>
+    <div class="box" id="serList"></div>
+    <button class="btn sec wide" type="button" id="serNew">+ Neue Serie</button>
+    <form class="box" id="serForm" novalidate hidden>
+      <p class="label" id="serFormLabel">Neue Serie</p>
+      <label class="fl" for="serName">Bezeichnung<input class="field" id="serName" maxlength="40" placeholder="z. B. Tanzen" autocomplete="off"></label>
+      <div class="fl"><span>Was ist an diesen Tagen?</span>
+        <div class="chips3" id="serKind" role="group" aria-label="Art">
+          <button type="button" data-k="no">Kann nicht</button>
+          <button type="button" data-k="busy">Belegt von–bis</button>
+          <button type="button" data-k="free">Kann von–bis</button>
+        </div>
+      </div>
+      <div class="times" id="serTimes">
+        <label for="serFrom">Von<input type="time" id="serFrom"></label>
+        <label for="serTo">Bis<input type="time" id="serTo"></label>
+      </div>
+      <div class="fl"><span>Wochentage</span><div class="wdpick" id="serDays" role="group" aria-label="Wochentage"></div></div>
+      <div class="fl"><span>Rhythmus</span>
+        <div class="chips3" id="serEvery" role="group" aria-label="Rhythmus">
+          <button type="button" data-e="1">Jede Woche</button>
+          <button type="button" data-e="2">Alle 2 Wochen</button>
+        </div>
+      </div>
+      <div class="times">
+        <label for="serStart">Ab<input type="date" id="serStart"></label>
+        <label for="serUntil">Bis (optional)<input type="date" id="serUntil"></label>
+      </div>
+      <p class="err" id="serErr" hidden></p>
+      <div class="foot">
+        <button class="btn sec" type="button" id="serCancel">Abbrechen</button>
+        <button class="btn" type="submit" id="serSave">Serie speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="overlay popwrap" id="nextPop" hidden>
+  <div class="panel pop" role="dialog" aria-modal="true" aria-labelledby="popTitle">
+    <div class="popbody" id="popBody"></div>
+    <div class="foot popfoot">
+      <button class="btn sec" type="button" id="popDetails">Zum Tag</button>
+      <button class="btn" type="button" id="popOk">Alles klar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="gate" hidden>
+  <form class="panel" id="gateForm">
+    <span class="grabber"></span>
+    <h2 id="gateTitle">Wie sollen wir dich nennen?</h2>
+    <p class="empty-note" id="gateText">Dieser Name steht bei deinen Zeiten im Kalender.</p>
+    <input class="field" id="gateName" maxlength="24" placeholder="z. B. Luca" autocomplete="nickname">
+    <div class="foot">
+      <button class="btn sec" type="button" id="gateCancel">Abbrechen</button>
+      <button class="btn" type="submit">Speichern</button>
+    </div>
+    <div class="acct" id="acctBox">
+      <p class="label">Konto</p>
+      <label class="linkbtn importbtn" for="importFile">Daten aus dem alten Zockplan übernehmen …</label>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <button class="linkbtn danger" type="button" id="logoutBtn">Abmelden</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast glass" id="toast" hidden></div>
+
+
+<script type="module" src="./shim.js"></script>
+<script type="module" src="./app.js"></script>
+<script type="module" src="./pwa.js"></script>
+</body>
+</html>

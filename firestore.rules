@@ -1,0 +1,23 @@
+rules_version = '2';
+// Zockplan – Sicherheitsregeln
+// Nur die zwei eingetragenen Google-Konten dürfen lesen und schreiben.
+// Jede Person schreibt nur ihr eigenes Dokument unter people/ und profiles/.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in [
+          'luca.treichel@googlemail.com', 'luca.treichel@gmail.com'
+        ];
+    }
+    function self(uid) { return request.auth.uid == uid; }
+    function small() { return !('img' in request.resource.data) || (request.resource.data.img is string && request.resource.data.img.size() < 900000); }
+
+    match /people/{uid}   { allow read: if allowed(); allow write: if allowed() && self(uid); }
+    match /profiles/{uid} { allow read: if allowed(); allow write: if allowed() && self(uid); }
+    match /games/{id}     { allow read: if allowed(); allow create, update: if allowed() && small(); allow delete: if allowed(); }
+    match /sessions/{id}  { allow read, write: if allowed(); }
+    match /{document=**}  { allow read, write: if false; }
+  }
+}
