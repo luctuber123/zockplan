@@ -1,7 +1,7 @@
 /* Zockplan – Verbindung zu Firebase.
    Stellt dieselbe Schnittstelle bereit, die die App aus dem Claude-Artefakt kennt
    (window.claude.use('db' | 'user' | 'assets')), nur eben mit Firebase dahinter. */
-import { firebaseConfig, ALLOWED_EMAILS } from './config.js';
+import { firebaseConfig } from './config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -18,7 +18,14 @@ let fs;
 try { fs = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch (e) { fs = initializeFirestore(app, {}); }
 
-const allowed = email => !!email && ALLOWED_EMAILS.map(x => x.toLowerCase()).includes(email.toLowerCase());
+/* Wer rein darf, entscheiden allein die Firestore-Regeln in der Firebase-Konsole.
+   Die App probiert nach der Anmeldung einen Schreibzugriff aufs eigene Profil:
+   Lehnen die Regeln ab, gibt es „Kein Zugang“. Ohne Internet geht es offline weiter. */
+async function checkAccess(u){
+  const write = setDoc(doc(fs, 'profiles', u.uid), { name: u.displayName || '', photo: u.photoURL || '', at: Date.now() }, { merge: true });
+  try { await Promise.race([write, new Promise(r => setTimeout(r, 8000))]); return true; }
+  catch (e) { return !(e && e.code === 'permission-denied'); }
+}
 
 /* ---------- Anmeldung ---------- */
 let readyResolve; const ready = new Promise(r => { readyResolve = r; });
@@ -78,10 +85,10 @@ if (document.body) start(); else document.addEventListener('DOMContentLoaded', s
 
 onAuthStateChanged(auth, async u => {
   if (!u){ currentUser = null; loginScreen('out'); return; }
-  if (!allowed(u.email)){ loginScreen('denied', u.email); return; }
+  loginScreen('wait');
+  if (!(await checkAccess(u))){ loginScreen('denied', u.email); return; }
   currentUser = u;
   loginScreen('in');
-  try { await setDoc(doc(fs, 'profiles', u.uid), { name: u.displayName || '', photo: u.photoURL || '', at: Date.now() }, { merge: true }); } catch (e) {}
   readyResolve();
 });
 window.zockAuth = { signOut: () => signOut(auth).then(() => location.reload()) };

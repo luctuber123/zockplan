@@ -1,6 +1,8 @@
 rules_version = '2';
 // Zockplan – Sicherheitsregeln
-// Nur die zwei eingetragenen Google-Konten dürfen lesen und schreiben.
+// Nur die eingetragenen Google-Konten dürfen lesen und schreiben.
+// Maßgeblich ist die Fassung in der Firebase-Konsole; die Adresse des Kollegen steht nur dort
+// (dieses Repository ist öffentlich).
 // Jede Person schreibt nur ihr eigenes Dokument unter people/ und profiles/.
 service cloud.firestore {
   match /databases/{database}/documents {

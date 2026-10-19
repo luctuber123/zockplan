@@ -10,8 +10,5 @@ export const firebaseConfig = {
   appId: '1:507095748043:web:ba570dcbacfacdeca93a4e',
 };
 
-/* Nur diese Google-Konten kommen in die App (muss zu firestore.rules passen). */
-export const ALLOWED_EMAILS = [
-  'luca.treichel@googlemail.com',
-  'luca.treichel@gmail.com',
-];
+/* Wer die App benutzen darf, steht nur in den Firestore-Regeln
+   (Firebase-Konsole → Firestore Database → Regeln). Dort weitere Adressen eintragen. */

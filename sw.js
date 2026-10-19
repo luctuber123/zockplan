@@ -1,7 +1,7 @@
 /* Zockplan – Service Worker: App-Dateien offline verfügbar halten.
    Eigene Dateien: erst Netz, sonst Zwischenspeicher (damit Änderungen sofort ankommen).
    Firebase-Bibliotheken: aus dem Zwischenspeicher (ändern sich nicht). */
-const CACHE = 'zockplan-v1';
+const CACHE = 'zockplan-v2';
 const SHELL = ['./', './index.html', './app.css', './app.js', './shim.js', './config.js', './pwa.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
