@@ -1,7 +1,7 @@
 /* Zockplan – Service Worker: App-Dateien offline verfügbar halten.
    Eigene Dateien: erst Netz, sonst Zwischenspeicher (damit Änderungen sofort ankommen).
    Firebase-Bibliotheken: aus dem Zwischenspeicher (ändern sich nicht). */
-const CACHE = 'zockplan-v2';
+const CACHE = 'zockplan-v3';
 const SHELL = ['./', './index.html', './app.css', './app.js', './shim.js', './config.js', './pwa.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
@@ -13,7 +13,8 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin === self.location.origin){
-    e.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })
+    if (url.pathname.endsWith('/version.json')) return; /* immer frisch aus dem Netz */
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })
       .catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
   } else if (url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/')){
     e.respondWith(caches.match(req).then(r => r || fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })));

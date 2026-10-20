@@ -285,6 +285,45 @@
     return {text:`in ${days} Tagen`};
   }
 
+  /* Termin in den eigenen Kalender übernehmen (.ics oder Google Kalender), Erinnerung 1 Std vorher */
+  const ICON_CAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13.5v4M10 15.5h4"/></svg>';
+  const icsStamp = d => d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const icsEsc = t => String(t).replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/([,;])/g,'\\$1');
+  function calInfo(n){
+    const [start, end] = sessionTimes(n), g = n.game;
+    const who = (n.pids || []).map(nameOf).filter(Boolean).join(' & ');
+    const url = location.origin + location.pathname;
+    return { start, end, url, title: g ? `Zocken: ${g.name}` : 'Zocken',
+      desc: [who ? `Mit ${who}` : '', g ? '' : 'Spiel noch offen', `Zockplan: ${url}`].filter(Boolean).join('\n') };
+  }
+  function downloadIcs(n){
+    const c = calInfo(n);
+    const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Zockplan//DE','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
+      `UID:zockplan-${n.date}@${location.hostname || 'zockplan'}`, `DTSTAMP:${icsStamp(new Date())}`,
+      `DTSTART:${icsStamp(c.start)}`, `DTEND:${icsStamp(c.end)}`,
+      `SUMMARY:${icsEsc(c.title)}`, `DESCRIPTION:${icsEsc(c.desc)}`, `URL:${c.url}`,
+      'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEsc(c.title)}`,'TRIGGER:-PT1H','END:VALARM',
+      'END:VEVENT','END:VCALENDAR'].join('\r\n') + '\r\n';
+    const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    /* iPhone/iPad: Datei öffnen, dann bietet iOS „Zum Kalender hinzufügen“ an */
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!ios) a.download = `zockplan-${n.date}.ics`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  }
+  function googleCalUrl(n){
+    const c = calInfo(n);
+    return 'https://calendar.google.com/calendar/render?' + new URLSearchParams({action:'TEMPLATE', text:c.title,
+      dates:`${icsStamp(c.start)}/${icsStamp(c.end)}`, details:c.desc, ctz:'Europe/Berlin'}).toString();
+  }
+  function calButtons(n){
+    return h('div',{class:'calrow'},
+      h('button',{type:'button',class:'btn sec',onclick:()=>downloadIcs(n)}, h('span',{html:ICON_CAL,class:'calic'}), 'In meinen Kalender'),
+      h('a',{class:'linkbtn',href:googleCalUrl(n),target:'_blank',rel:'noopener'}, 'Google Kalender'));
+  }
+
   /* Kommentare pro Tag; jede Person speichert ihre eigenen im eigenen Dokument */
   const ICON_BUBBLE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.4 3.6A1 1 0 0 1 5 18.8V16h0a2.5 2.5 0 0 1-1-2V5.5Z"/></svg>';
   let seen = {}; try { seen = JSON.parse(localStorage.getItem('zockplan-seen') || '{}') || {}; } catch(e){}
@@ -449,7 +488,14 @@
     return { persons, sessions, games:S.games.map(g => g.id), t:Date.now() };
   }
   function storeSnap(o){ try { localStorage.setItem(snapKey(), JSON.stringify(o)); } catch(e){} }
-  function markFeedRead(){ S.snap = buildSnap(); storeSnap(S.snap); S.feedAll = false; }
+  function markFeedRead(){ S.snap = buildSnap(); storeSnap(S.snap); S.feedAll = false; setBadge(0); }
+  /* Zahl am App-Symbol (installierte App) und im Fenstertitel */
+  let badgeN = -1;
+  function setBadge(n){
+    if (n === badgeN) return; badgeN = n;
+    document.title = n ? `(${n}) Zockplan` : 'Zockplan';
+    try { if ('setAppBadge' in navigator) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {}); } catch(e){}
+  }
   function initSnap(){
     if (S.snapInit || !S.me || !S.loaded.people || !S.loaded.sessions || !S.loaded.games) return;
     S.snapInit = true;
@@ -498,7 +544,7 @@
     const box = $('feedBox'); box.textContent = '';
     initSnap();
     if (!S.snap) return;
-    const list = changes(); if (!list.length) return;
+    const list = changes(); setBadge(list.length); if (!list.length) return;
     S.feedShown = true;
     const max = S.feedAll ? list.length : 5;
     box.append(h('section',{class:'feed glass','aria-label':'Neu seit deinem letzten Besuch'},
@@ -531,7 +577,8 @@
       h('span',{class:'cd'+(cd.live?' live':'')}, cd.text),
       h('div',{class:'popwho'}, n.pids.length ? h('span',{class:'avs'}, n.pids.map(p => avatar(p,'lg'))) : null,
         n.pids.map(nameOf).join(' & ')),
-      h('div',{class:'popgame'}, g ? `Gespielt wird: ${g.name}` : 'Spiel noch offen – stimmt im Tag ab'));
+      h('div',{class:'popgame'}, g ? `Gespielt wird: ${g.name}` : 'Spiel noch offen – stimmt im Tag ab'),
+      calButtons(n));
     $('popDetails').onclick = () => { closePop(); openSheet(n.date); };
     $('nextPop').hidden = false;
     setTimeout(() => $('popOk').focus(), 0);
@@ -755,6 +802,7 @@
             h('div',{class:'when'}, `${fx.from}–${fx.to}`),
             h('div',{class:'what'}, g ? g.name : 'Spiel noch offen – stimmt unten ab', ' · ', cd.text))),
         who.length ? h('div',{class:'erow'}, who.map(p => personTag(p))) : null,
+        calButtons({date, from:fx.from, to:fx.to, game:g, pids:who}),
         canWrite() ? h('div',{class:'gpick'}, h('span',{class:'vhint',style:'width:100%'},'Spiel festlegen:'),
           choices.map(cg => h('button',{type:'button',class:'chip','aria-pressed':String(!!g && g.id===cg.id && fx.game===cg.id),onclick:()=>setSessionGame(cg.id)}, cover(cg), cg.name))) : null,
         canWrite() ? h('div',{class:'fixrow'},
@@ -1126,6 +1174,14 @@
     await myWrite(d => { if (n) d.nick = n; else delete d.nick; });
   });
   $('gateCancel').addEventListener('click', () => { $('gate').hidden = true; });
+  const badgeBtn = $('badgeBtn');
+  if (badgeBtn && 'setAppBadge' in navigator && 'Notification' in window && Notification.permission === 'default' && /apple/i.test(navigator.vendor || '')){
+    badgeBtn.hidden = false;
+    badgeBtn.addEventListener('click', async () => {
+      try { await Notification.requestPermission(); } catch(e){}
+      badgeBtn.hidden = true; const n = badgeN; badgeN = -1; setBadge(Math.max(0, n));
+    });
+  }
   $('logoutBtn').addEventListener('click', () => { if (window.zockAuth) window.zockAuth.signOut(); });
   /* Einmaliger Umzug: Datei aus dem Claude-Artefakt einlesen */
   $('importFile').addEventListener('change', async () => {
