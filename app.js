@@ -613,8 +613,82 @@
     };
   }
 
+  /* ---------- Zeitstrahl: eure Zeiten als Balken, Überschneidung grün ---------- */
+  const TL_OTHER = ['#ff9f5a','#3fb8ff','#ff6fb1','#e3b400','#5bdcb1'];
+  function tlLanes(){
+    const others = allPids().filter(p => !isMe(p) && !String(p).startsWith('l:'));
+    return [...(S.me ? [S.me.pid] : []), ...others];
+  }
+  function tlColor(pid){
+    if (isMe(pid)) return '#8f7bff';
+    const i = tlLanes().filter(p => !isMe(p)).indexOf(pid);
+    return TL_OTHER[(i < 0 ? hash(pid) : i) % TL_OTHER.length];
+  }
+  function tlRange(days){
+    let a = 14*60, b = 24*60;
+    for (const d of days){
+      const ds = ymd(d), segs = [...slotsOn(ds), ...seriesOn(ds,'busy')];
+      if (S.sessions[ds] && S.sessions[ds].from) segs.push(S.sessions[ds]);
+      for (const x of segs){ const [s0,e0] = span(x); a = Math.min(a, s0); b = Math.max(b, e0); }
+    }
+    a = Math.max(0, Math.floor(a/120)*120); b = Math.min(30*60, Math.ceil(b/120)*120);
+    return { a, b };
+  }
+  function tlAxis(R){
+    const step = (R.b - R.a) > 14*60 ? 240 : 120, marks = [];
+    for (let t = R.a; t <= R.b; t += step) marks.push(t);
+    const pct = t => (t - R.a) / (R.b - R.a) * 100;
+    const lanes = tlLanes();
+    return h('div',{class:'tlaxis','aria-hidden':'true'},
+      h('div',{class:'tllegend'},
+        lanes.map(p => h('span',null, h('em',{style:`background:${tlColor(p)}`}), isMe(p) ? 'Du' : nameOf(p))),
+        h('span',null, h('em',{class:'ovk'}), 'Treffer'),
+        h('span',null, h('em',{class:'fxk'}), 'Fix')),
+      h('div',{class:'tlaxrow'}, h('span'),
+        h('div',{class:'tlrow'},
+          h('div',{class:'tlscale'}, marks.map(t => h('span',{style:`left:${pct(t)}%`}, String((t/60) % 24 === 0 && t > 0 ? 24 : Math.floor(t/60) % 24)))),
+          h('span',{class:'tlside'}))));
+  }
+  function tlTrack(ds, R){
+    const total = R.b - R.a;
+    const pct = t => Math.max(0, Math.min(100, (t - R.a) / total * 100));
+    const seg = (a, b) => `left:${pct(a)}%;width:${Math.max(0.8, pct(b) - pct(a))}%`;
+    const list = slotsOn(ds), m = matchOn(ds), fx = S.sessions[ds], sts = statuses(ds), busy = seriesOn(ds,'busy');
+    const lanes = tlLanes();
+    let any = false;
+    const laneEls = lanes.map(p => {
+      const st = (sts.find(x => x.pid === p) || {}).st;
+      const kids = [];
+      if (st === 'no') kids.push(h('i',{class:'tlnolane'}));
+      for (const x of busy.filter(x => x.pid === p)){ const [a,b] = span(x); kids.push(h('i',{class:'tlbusy',style:seg(a,b),title:`${nameOf(p)}: ${seriesLabel(x)} ${x.from}–${x.to}`})); any = true; }
+      for (const x of list){
+        const own = x.pid === p, plus = !own && x.plus.includes(p);
+        if (!own && !plus) continue;
+        const [a,b] = span(x); any = true;
+        kids.push(h('i',{class:'tlbar'+(plus ? ' plus' : ''),style:`${seg(a,b)};--c:${tlColor(p)}`,title:`${nameOf(p)}: ${x.from}–${x.to}${plus ? ' (+1)' : ''}`}));
+      }
+      if (st === 'maybe' && !kids.length) kids.push(h('i',{class:'tlmaybe'}));
+      if (st) any = true;
+      return h('div',{class:'tllane'}, kids);
+    });
+    const blk = blocked(ds);
+    const kids = [];
+    if (m && !fx && !blk) kids.push(h('i',{class:'tlov',style:seg(m.s, m.e)}));
+    kids.push(h('div',{class:'tllanes',style:`grid-template-rows:repeat(${Math.max(1, lanes.length)},1fr)`}, laneEls));
+    if (fx && fx.from){ const [a,b] = span(fx); const w = pct(b) - pct(a);
+      kids.push(h('span',{class:'tlfix',style:seg(a,b)}, h('span',{html:ICON_LOCK,class:'tllock'}), w > 13 ? 'Fix' : null)); }
+    if (blk) kids.push(h('span',{class:'tlmsg no'}, stText(ds)));
+    else if (!any && !fx) kids.push(h('span',{class:'tlmsg'}, ds < todayStr ? '' : canWrite() ? '+ Zeit eintragen' : ''));
+    return h('div',{class:'tltrack',style:`--step:${(120/total*100).toFixed(4)}%`,'aria-hidden':'true'}, kids);
+  }
+  function tlRow(ds, R){
+    return h('div',{class:'tlrow'}, tlTrack(ds, R), h('span',{class:'tlside'}, statusPicker(ds)));
+  }
+
   function renderWeek(){
-    const wrap = h('div',{class:'week'});
+    const wrap = h('div',{class:'week tl'});
+    const R = tlRange(visibleDays());
+    wrap.append(tlAxis(R));
     for (const d of visibleDays()){
       const ds = ymd(d), list = slotsOn(ds), m = matchOn(ds), fx = S.sessions[ds];
       const past = ds < todayStr, slim = past || (!list.length && !fx);
@@ -632,15 +706,16 @@
             h('span',{class:'dn'}, d.getDate()),
             h('span',{class:'mo'}, monthShort(d)),
             ds===todayStr ? h('span',{class:'today-tag'},'Heute') : null),
-          h('div',{class:'dbody slimrow'},
-            holiPill(ds),
-            who.length
-              ? h('span',{class:'slimsum'}, h('span',{class:'avs'}, who.map(p => avatar(p))), fx ? `Gezockt ${fx.from}–${fx.to}` : m ? 'Treffer' : `${list.length} ${list.length === 1 ? 'Eintrag' : 'Einträge'}`)
-              : st ? h('span',{class:'slimsum'}, stAvatars(ds), stText(ds))
-              : seriesOn(ds,'busy').length ? h('span',{class:'slimsum'}, h('span',{html:ICON_REPEAT,class:'rep'}), seriesOn(ds,'busy').map(x => `${nameOf(x.pid)}: ${seriesLabel(x)} ${x.from}–${x.to}`).join(' · '))
-              : holidayOn(ds) ? null : h('span',{class:'add-hint'}, past ? 'Keine Einträge' : '+ Zeit eintragen'),
-            noteBadge(ds),
-            statusPicker(ds)));
+          h('div',{class:'dbody'},
+            tlRow(ds, R),
+            (() => {
+              const cap = [holiPill(ds),
+                fx && past ? h('span',{class:'slimsum'}, h('span',{class:'avs'}, who.map(p => avatar(p))), `Gezockt ${fx.from}–${fx.to}`)
+                : st && st !== 'no' ? h('span',{class:'slimsum'}, stAvatars(ds), stText(ds))
+                : seriesOn(ds,'busy').length ? h('span',{class:'slimsum'}, h('span',{html:ICON_REPEAT,class:'rep'}), seriesOn(ds,'busy').map(x => `${nameOf(x.pid)}: ${seriesLabel(x)} ${x.from}–${x.to}`).join(' · '))
+                : null,
+                noteBadge(ds)].filter(Boolean);
+              return cap.length ? h('div',{class:'tlcap'}, cap) : null; })()));
         wrap.append(card);
         continue;
       }
@@ -656,8 +731,9 @@
           h('span',{class:'mo'}, monthShort(d)),
           ds===todayStr ? h('span',{class:'today-tag'},'Heute') : null),
         h('div',{class:'dbody'},
+          tlRow(ds, R),
           holiPill(ds),
-          (st || statusPicker(ds) || noteBadge(ds)) ? h('div',{class:'strow'}, h('span',{class:'sttext'}, stAvatars(ds), stText(ds)), h('span',{class:'stright'}, noteBadge(ds), statusPicker(ds))) : null,
+          (st || noteBadge(ds)) ? h('div',{class:'strow'}, h('span',{class:'sttext'}, stAvatars(ds), stText(ds)), h('span',{class:'stright'}, noteBadge(ds))) : null,
           fx ? h('span',{class:'fixbadge'}, h('span',{html:ICON_LOCK,style:'display:inline-flex;font-family:inherit'}), 'Fix', h('span',null,`${fx.from}–${fx.to}`))
              : m ? h('span',{class:'hitline'}, 'Treffer', h('span',null,`${fmtMin(m.s)}–${fmtMin(m.e)}`)) : null,
           (() => { if (!needsVote(ds)) return null; const l = leader(ds);

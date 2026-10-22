@@ -658,3 +658,57 @@ html[data-device="desktop"] .installbar{display:none}
 html[data-device="desktop"] .updbar{bottom:24px}
 .updbar p{margin:0;flex:1;font-size:13.5px;line-height:1.35}
 .updbar .btn{padding:8px 14px;font-size:13.5px}
+
+/* ---- Ohne Titel: nur die Knöpfe oben rechts ---- */
+.top{justify-content:flex-end}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- Zeitstrahl in der Wochenansicht ---- */
+:root{--dcol:72px;--dgap:14px;--dpx:16px;--sw:96px;--tl-me:#8f7bff;--tlgrid:rgba(var(--ink),.07);--tlbg:rgba(var(--ink),.04)}
+@media (max-width:640px){:root{--dcol:50px;--dgap:10px;--dpx:12px}}
+html[data-device="desktop"]{--dcol:104px;--dgap:18px;--dpx:22px}
+html[data-device] .week.tl .day{grid-template-columns:var(--dcol) minmax(0,1fr);column-gap:var(--dgap);padding-left:var(--dpx);padding-right:var(--dpx)}
+html[data-device] .week.tl .day.slim{align-items:center;padding-top:9px;padding-bottom:9px}
+html[data-device] .week.tl .day.slim .dhead{min-width:0;flex-direction:column;align-items:flex-start;gap:0}
+.week.tl .day.slim .dhead .wd{font-size:10.5px}
+.week.tl .day.slim .dhead .dn{font-size:18px}
+.week.tl .day.slim .today-tag{display:none}
+.week.tl .day.today{border-color:var(--accent);box-shadow:var(--edge),0 0 0 1.5px var(--accent)}
+.week.tl .dbody{gap:8px}
+.tlrow{display:flex;align-items:center;gap:10px;width:100%;min-width:0}
+.tlside{width:var(--sw);flex:none;display:flex;justify-content:flex-end}
+.tlside .stpick{margin-left:0}
+.tltrack{position:relative;flex:1;min-width:0;height:36px;border-radius:10px;overflow:hidden;
+  background:var(--tlbg) repeating-linear-gradient(90deg,transparent 0 calc(var(--step) - 1px),var(--tlgrid) calc(var(--step) - 1px) var(--step))}
+.tllanes{position:absolute;inset:5px 0;display:grid;gap:4px}
+.tllane{position:relative;min-height:0}
+.tlbar{position:absolute;top:0;bottom:0;border-radius:6px;background:var(--c)}
+.tlbar.plus{background:transparent;box-shadow:inset 0 0 0 2px var(--c)}
+.tlbusy{position:absolute;top:0;bottom:0;border-radius:6px;background:repeating-linear-gradient(135deg,rgba(var(--ink),.22) 0 4px,rgba(var(--ink),.06) 4px 8px)}
+.tlnolane{position:absolute;inset:0;border-radius:6px;background:repeating-linear-gradient(135deg,rgba(255,107,114,.45) 0 5px,rgba(255,107,114,.12) 5px 10px)}
+.tlmaybe{position:absolute;left:0;right:0;top:50%;height:0;border-top:2px dashed var(--maybe);opacity:.8}
+.tlov{position:absolute;top:0;bottom:0;border-radius:8px;background:rgba(52,214,122,.24);box-shadow:inset 0 0 0 1.5px var(--match)}
+.tlfix{position:absolute;top:2px;bottom:2px;border-radius:8px;background:linear-gradient(135deg,#8f7bff,#4ea4ff);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:4px;box-shadow:0 4px 12px rgba(100,110,255,.35);z-index:2}
+.tllock{display:inline-flex;width:12px;height:12px}.tllock svg{width:100%;height:100%}
+.tlmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--faint);z-index:3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px}
+.tlmsg.no{color:var(--danger-text);font-weight:700}
+.tlmsg.no::before{content:"";position:absolute;inset:0;z-index:-1}
+.tlcap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.tlcap .nbadge{margin-left:auto}
+.tlaxis{display:flex;flex-direction:column;gap:6px;padding:0 var(--dpx);margin-bottom:-2px}
+.tllegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;font-weight:600;color:var(--muted)}
+.tllegend span{display:inline-flex;align-items:center;gap:6px}
+.tllegend em{display:inline-block;width:16px;height:8px;border-radius:4px}
+.tllegend em.ovk{background:rgba(52,214,122,.3);box-shadow:inset 0 0 0 1.5px var(--match)}
+.tllegend em.fxk{background:linear-gradient(135deg,#8f7bff,#4ea4ff)}
+.tlaxrow{display:grid;grid-template-columns:var(--dcol) minmax(0,1fr);column-gap:var(--dgap)}
+.tlscale{position:relative;flex:1;height:14px;font-size:10.5px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
+.tlscale span{position:absolute;top:0;transform:translateX(-50%)}
+.tlscale span:first-child{transform:none}
+.tlscale span:last-child{transform:translateX(-100%)}
+.week.tl .day.past .tltrack{opacity:.7}
+@media (max-width:640px){
+  :root{--sw:86px}
+  .tlside .stb{width:26px;height:26px}
+  .tlside .stpick{gap:4px}
+}

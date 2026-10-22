@@ -12,7 +12,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Zockplan">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icons/icon-192.png" type="image/png">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="./icons/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="stylesheet" href="./app.css">
 </head>
@@ -21,10 +22,7 @@
 
 <div class="app" id="app" data-tab="cal">
   <header class="top">
-    <div class="brand">
-      <h1>Zock<span>plan</span></h1>
-      <p>Wann habt ihr Zeit – und was wird gezockt?</p>
-    </div>
+    <h1 class="sr-only">Zockplan</h1>
     <div class="topright">
       <button class="icon-btn glass look" id="serBtn" type="button" aria-label="Serien – wiederkehrende Termine" title="Serien"></button>
       <button class="icon-btn glass look" id="lookBtn" type="button" aria-label="Hell oder dunkel"></button>
