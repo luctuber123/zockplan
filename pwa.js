@@ -1,7 +1,7 @@
 /* Zockplan – App-Funktionen: Offline-Zwischenspeicher, Hinweis zum Installieren,
    Offline-Anzeige und Hinweis auf eine neue Version.
    VERSION muss zu version.json passen (bei jeder Änderung beide erhöhen). */
-const VERSION = '2026-10-22.1';
+const VERSION = '2026-10-22.2';
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 
 const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
