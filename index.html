@@ -197,7 +197,10 @@
       <p class="label">Konto</p>
       <label class="linkbtn importbtn" for="importFile">Daten aus dem alten Zockplan übernehmen …</label>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
-      <button class="linkbtn" type="button" id="badgeBtn" hidden>Zahl für Neues am App-Symbol erlauben</button>
+      <div class="pushbox" id="pushBox">
+        <button class="linkbtn" type="button" id="pushBtn" hidden>Benachrichtigungen einschalten</button>
+        <p class="pushinfo" id="pushInfo" hidden></p>
+      </div>
       <button class="linkbtn danger" type="button" id="logoutBtn">Abmelden</button>
     </div>
   </form>

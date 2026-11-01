@@ -1250,14 +1250,6 @@
     await myWrite(d => { if (n) d.nick = n; else delete d.nick; });
   });
   $('gateCancel').addEventListener('click', () => { $('gate').hidden = true; });
-  const badgeBtn = $('badgeBtn');
-  if (badgeBtn && 'setAppBadge' in navigator && 'Notification' in window && Notification.permission === 'default' && /apple/i.test(navigator.vendor || '')){
-    badgeBtn.hidden = false;
-    badgeBtn.addEventListener('click', async () => {
-      try { await Notification.requestPermission(); } catch(e){}
-      badgeBtn.hidden = true; const n = badgeN; badgeN = -1; setBadge(Math.max(0, n));
-    });
-  }
   $('logoutBtn').addEventListener('click', () => { if (window.zockAuth) window.zockAuth.signOut(); });
   /* Einmaliger Umzug: Datei aus dem Claude-Artefakt einlesen */
   $('importFile').addEventListener('change', async () => {

@@ -712,3 +712,8 @@ html[data-device] .week.tl .day.slim .dhead{min-width:0;flex-direction:column;al
   .tlside .stb{width:26px;height:26px}
   .tlside .stpick{gap:4px}
 }
+
+/* Benachrichtigungen im Konto-Fenster */
+.pushbox{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.pushinfo{margin:0;font-size:13px;color:var(--muted);line-height:1.4}
+#pushBar{flex-wrap:wrap}

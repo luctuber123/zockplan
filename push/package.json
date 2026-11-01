@@ -1,0 +1,10 @@
+{
+  "name": "zockplan-push",
+  "private": true,
+  "type": "module",
+  "description": "Push-Benachrichtigungen für Zockplan (läuft als GitHub-Workflow)",
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "web-push": "^3.6.7"
+  }
+}

@@ -9,7 +9,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  doc, collection, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy as fbOrderBy,
+  doc, collection, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy as fbOrderBy, getDoc, deleteField,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const app = initializeApp(firebaseConfig);
@@ -22,7 +22,7 @@ catch (e) { fs = initializeFirestore(app, {}); }
    Die App probiert nach der Anmeldung einen Schreibzugriff aufs eigene Profil:
    Lehnen die Regeln ab, gibt es „Kein Zugang“. Ohne Internet geht es offline weiter. */
 async function checkAccess(u){
-  const write = setDoc(doc(fs, 'profiles', u.uid), { name: u.displayName || '', photo: u.photoURL || '', at: Date.now() }, { merge: true });
+  const write = setDoc(doc(fs, 'profiles', u.uid), { name: u.displayName || '', photo: u.photoURL || '', at: Date.now(), seenAt: Date.now() }, { merge: true });
   try { await Promise.race([write, new Promise(r => setTimeout(r, 8000))]); return true; }
   catch (e) { return !(e && e.code === 'permission-denied'); }
 }
@@ -90,6 +90,7 @@ onAuthStateChanged(auth, async u => {
   currentUser = u;
   loginScreen('in');
   readyResolve();
+  setupPush();
 });
 window.zockAuth = { signOut: () => signOut(auth).then(() => location.reload()) };
 
@@ -175,3 +176,106 @@ window.claude = {
     return null;
   },
 };
+
+/* ---------- Push-Benachrichtigungen ---------- */
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const pushSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+let vapidKey = null, pushReady = false;
+
+const b64ToBytes = s => { const p = '='.repeat((4 - s.length % 4) % 4); const r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, c => c.charCodeAt(0)); };
+const bytesToB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+function deviceId(){
+  try { let id = localStorage.getItem('zockplan-device'); if (!id){ id = Math.random().toString(36).slice(2, 10); localStorage.setItem('zockplan-device', id); } return id; }
+  catch (e) { return 'geraet'; }
+}
+async function loadVapid(){
+  try { const s = await getDoc(doc(fs, 'profiles', '_push')); vapidKey = s.exists() ? (s.data().vapid || null) : null; } catch (e) {}
+  return vapidKey;
+}
+async function saveSub(sub){
+  await setDoc(doc(fs, 'profiles', currentUser.uid), { push: { [deviceId()]: { ...sub.toJSON(), at: Date.now(), ua: navigator.userAgent.slice(0, 140) } } }, { merge: true });
+}
+async function currentSub(){
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+function pushUI(btnText, info){
+  const btn = document.getElementById('pushBtn'), inf = document.getElementById('pushInfo');
+  if (!btn || !inf) return;
+  btn.hidden = !btnText; if (btnText) btn.textContent = btnText;
+  inf.hidden = !info; inf.textContent = info || '';
+}
+async function renderPush(){
+  if (!pushSupported){
+    pushUI(null, isIOS && !standalone ? 'Für Benachrichtigungen Zockplan zuerst über Teilen → „Zum Home-Bildschirm“ hinzufügen und von dort öffnen.' : null);
+    return 'unsupported';
+  }
+  if (Notification.permission === 'denied'){ pushUI(null, 'Benachrichtigungen sind blockiert. Du kannst sie in den Einstellungen für Zockplan wieder erlauben.'); return 'denied'; }
+  let sub = null; try { sub = await currentSub(); } catch (e) {}
+  if (sub && Notification.permission === 'granted'){ pushUI('Benachrichtigungen ausschalten', 'Benachrichtigungen sind an ✓'); return 'on'; }
+  pushUI('Benachrichtigungen einschalten', null); return 'off';
+}
+async function enablePush(){
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted'){ await renderPush(); return false; }
+  if (!vapidKey) await loadVapid();
+  if (!vapidKey){ pushUI('Benachrichtigungen einschalten', 'Der Benachrichtigungs-Dienst ist noch nicht fertig eingerichtet. Versuch es in ein paar Minuten nochmal.'); return false; }
+  pushUI(null, 'Wird eingeschaltet …');
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await Promise.race([
+      reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(vapidKey) }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('keine Antwort vom Push-Dienst – bitte später nochmal versuchen')), 20000)),
+    ]);
+    await saveSub(sub);
+  } catch (e) {
+    pushUI('Benachrichtigungen einschalten', 'Einschalten hat nicht geklappt: ' + ((e && e.message) || e));
+    return false;
+  }
+  await renderPush(); return true;
+}
+async function disablePush(){
+  try { const sub = await currentSub(); if (sub) await sub.unsubscribe(); } catch (e) {}
+  try { await updateDoc(doc(fs, 'profiles', currentUser.uid), { ['push.' + deviceId()]: deleteField() }); } catch (e) {}
+  await renderPush();
+}
+function pushBar(){
+  let dismissed = false; try { dismissed = !!localStorage.getItem('zockplan-push-asked'); } catch (e) {}
+  if (dismissed || document.getElementById('pushBar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'pushBar'; bar.className = 'updbar glass'; bar.setAttribute('role', 'status');
+  bar.innerHTML = '<p>Nachricht bekommen, wenn sich bei Zockplan etwas tut?</p><button class="btn" type="button">Einschalten</button><button class="btn sec" type="button">Später</button>';
+  const [on, later] = bar.querySelectorAll('button');
+  const close = () => { try { localStorage.setItem('zockplan-push-asked', '1'); } catch (e) {} bar.remove(); };
+  on.onclick = async () => { close(); await enablePush(); };
+  later.onclick = close;
+  document.body.append(bar);
+}
+let lastSeen = Date.now();
+function markSeen(){
+  if (!currentUser || Date.now() - lastSeen < 30000) return;
+  lastSeen = Date.now();
+  setDoc(doc(fs, 'profiles', currentUser.uid), { seenAt: lastSeen }, { merge: true }).catch(() => {});
+}
+async function setupPush(){
+  if (pushReady) return; pushReady = true;
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') markSeen(); });
+  const btn = document.getElementById('pushBtn');
+  if (btn) btn.addEventListener('click', async () => {
+    if (btn.textContent.includes('ausschalten')) await disablePush(); else await enablePush();
+  });
+  if (!pushSupported){ renderPush(); return; }
+  await loadVapid();
+  /* Bestehendes Abo auffrischen; passt der Schlüssel nicht mehr, neu einschalten lassen */
+  try {
+    const sub = await currentSub();
+    if (sub && Notification.permission === 'granted'){
+      const key = sub.options && sub.options.applicationServerKey ? bytesToB64(sub.options.applicationServerKey) : null;
+      if (vapidKey && key && key !== vapidKey){ await sub.unsubscribe(); }
+      else await saveSub(sub);
+    }
+  } catch (e) {}
+  const st = await renderPush();
+  if (st === 'off' && Notification.permission === 'default' && vapidKey) setTimeout(pushBar, 3000);
+}

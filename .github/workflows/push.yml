@@ -1,0 +1,49 @@
+# Zockplan – Push-Benachrichtigungen
+# Schaut alle 5 Minuten, ob jemand etwas eingetragen hat, und schickt den anderen eine Nachricht.
+# Braucht das Secret FIREBASE_SERVICE_ACCOUNT (Settings → Secrets and variables → Actions).
+name: Push-Benachrichtigungen
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['push/**', '.github/workflows/push.yml']
+
+concurrency:
+  group: push-notify
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: push/package-lock.json
+      - name: Abhängigkeiten
+        working-directory: push
+        run: npm ci --no-audit --no-fund
+      - name: Änderungen prüfen und Nachrichten senden
+        working-directory: push
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node notify.mjs
+      # GitHub pausiert zeitgesteuerte Abläufe nach 60 Tagen ohne Commit – daher ab und zu ein leerer Commit.
+      - name: Wach halten
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt $(( 50 * 86400 )) ]; then
+            git config user.name "zockplan-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Wach halten (Push-Benachrichtigungen)"
+            git push
+          fi
