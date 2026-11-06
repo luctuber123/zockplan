@@ -660,7 +660,8 @@ html[data-device="desktop"] .updbar{bottom:24px}
 .updbar .btn{padding:8px 14px;font-size:13.5px}
 
 /* ---- Ohne Titel: nur die Knöpfe oben rechts ---- */
-.top{justify-content:flex-end}
+.top{justify-content:space-between;align-items:center}
+.homebtn{color:var(--fg);text-decoration:none}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ---- Zeitstrahl in der Wochenansicht ---- */

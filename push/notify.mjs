@@ -72,7 +72,7 @@ if (changes.length){
       title: 'Zockplan',
       body: mine[0].text + (mine.length > 1 ? ` (+${mine.length - 1} weitere)` : ''),
       badge: list.length,
-      url: APP_URL,
+      url: APP_URL + 'plan.html',
       tag: 'zockplan',
     });
     for (const [dev, sub] of Object.entries(subs)){
