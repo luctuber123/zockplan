@@ -2,7 +2,7 @@
    Eigene Seiten: erst Netz, sonst Zwischenspeicher (damit Änderungen sofort ankommen).
    Bibliotheken (vendor/, Firebase): aus dem Zwischenspeicher (ändern sich nicht).
    Das Spiel wird beim Installieren komplett vorgeladen, damit es auch ohne Internet läuft. */
-const CACHE = 'zockplan-v7';
+const CACHE = 'zockplan-v8';
 const SHELL = ['./', './index.html', './plan.html', './app.css', './app.js', './shim.js', './config.js', './pwa.js', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-192.png?v=2', './icons/icon-512.png?v=2', './icons/apple-touch-icon.png?v=2', './icons/favicon-32.png?v=2'];
 const GAME = ['./frost-grill/', './frost-grill/index.html', './frost-grill/cover.jpg',
@@ -12,7 +12,10 @@ const GAME = ['./frost-grill/', './frost-grill/index.html', './frost-grill/cover
   './vendor/three/examples/jsm/postprocessing/OutputPass.js', './vendor/three/examples/jsm/postprocessing/ShaderPass.js', './vendor/three/examples/jsm/postprocessing/MaskPass.js',
   './vendor/three/examples/jsm/postprocessing/Pass.js', './vendor/three/examples/jsm/shaders/CopyShader.js', './vendor/three/examples/jsm/shaders/LuminosityHighPassShader.js',
   './vendor/three/examples/jsm/shaders/OutputShader.js', './vendor/three/examples/jsm/geometries/RoundedBoxGeometry.js', './vendor/three/examples/jsm/environments/RoomEnvironment.js',
-  './vendor/three/examples/jsm/objects/MarchingCubes.js'];
+  './vendor/three/examples/jsm/objects/MarchingCubes.js',
+  './fortschritt/', './fortschritt/index.html', './fortschritt/cover.jpg', './vendor/fonts/tower.css',
+  './vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2', './vendor/fonts/atkinson-hyperlegible-latin-400-italic.woff2', './vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2',
+  './vendor/fonts/pixelify-sans-latin-500-normal.woff2', './vendor/fonts/pixelify-sans-latin-600-normal.woff2', './vendor/fonts/pixelify-sans-latin-700-normal.woff2'];
 
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll([...SHELL, ...GAME])).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {

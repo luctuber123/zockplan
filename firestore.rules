@@ -20,6 +20,8 @@ service cloud.firestore {
     match /profiles/{uid} { allow read: if allowed(); allow write: if allowed() && self(uid); }
     match /games/{id}     { allow read: if allowed(); allow create, update: if allowed() && small(); allow delete: if allowed(); }
     match /sessions/{id}  { allow read, write: if allowed(); }
+    match /tower_achievements/{id} { allow read, write: if allowed(); }
+    match /tower_meta/{id}         { allow read, write: if allowed(); }
     match /{document=**}  { allow read, write: if false; }
   }
 }

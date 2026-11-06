@@ -277,5 +277,6 @@ async function setupPush(){
     }
   } catch (e) {}
   const st = await renderPush();
-  if (st === 'off' && Notification.permission === 'default' && vapidKey) setTimeout(pushBar, 3000);
+  /* Nur auf der Zockplan-Seite fragen (dort gibt es den Knopf zum Einstellen) */
+  if (st === 'off' && Notification.permission === 'default' && vapidKey && btn) setTimeout(pushBar, 3000);
 }
